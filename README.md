@@ -5,3 +5,5 @@
 Dílčí vypracování:
 
  + [Říjen](Dílčí_vypracování/Říjen.pdf)
+ + [Listopad]()
+
