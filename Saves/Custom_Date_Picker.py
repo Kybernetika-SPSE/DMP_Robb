@@ -16,14 +16,12 @@ MDBoxLayout:
         on_release: app.root.current = "other"
         size: 75, 50
         size_hint: None, None # <---
-
-
 '''
 
 class Layout(GridLayout):
     def __init__(self, **kwargs):
-        self.input_day_array = []
-        self.output_day_array = []
+        self.input_day_array = []  #data vybrana uzivatelem
+        self.output_day_array = [] #data ktere vraci datepicker pro databazi
 
         self.displayed_month = datetime.now().month
         self.displayed_year = datetime.now().year
@@ -42,11 +40,9 @@ class Layout(GridLayout):
 
         #inicializace layutu pro zobrazeni mesice a roku
         self.header_layout = BoxLayout(orientation='horizontal', size_hint_y=0.2)
-        #pridani textu na obrazovku
-        self.header_layout.add_widget(self.label1)
+        self.header_layout.add_widget(self.label1) #pridani textu na obrazovku
         #self.header_layout.add_widget(self.label2)
-        #pridani header layoutu na obrazovku
-        self.add_widget(self.header_layout)
+        self.add_widget(self.header_layout)        #pridani header layoutu na obrazovku
 
         #inicializace tlacitek pro meneni mesice a roku
         self.month_add = Button(text="Next Month")
@@ -68,20 +64,19 @@ class Layout(GridLayout):
 
         #vytvoreni layoutu pro navigaci v kalendari
         self.navigation_layout = BoxLayout(orientation='horizontal', size_hint_y=0.2)
-        #pridani tlacitek pro meneni mesicu na obrazovku
-        self.navigation_layout.add_widget(self.month_subtract)
-        self.navigation_layout.add_widget(self.month_add)
-        #pridani navigacniho layoutu na obrazovku
-        self.add_widget(self.navigation_layout)
+        self.navigation_layout.add_widget(self.month_subtract) #pridani tlacitek pro meneni mesicu na obrazovku
+        self.navigation_layout.add_widget(self.month_add)      #pridani tlacitek pro meneni mesicu na obrazovku
+        self.add_widget(self.navigation_layout)                #pridani navigacniho layoutu na obrazovku
 
+        #inicializace layoutu pro jednotlive talitka s daty
         self.date_layout = GridLayout(cols=7, spacing=10, padding=10)
         #dynamicke tvoreni tlacitek podle poctu dni v zobrazenem mesici
         for i in range(1,calendar.monthrange(self.displayed_year,self.displayed_month)[1]+1):
-            self.btn_text = f"{i}"
-            self.button = ToggleButton(text=self.btn_text)
-            self.button.bind(on_press=self.callback)
-            self.date_layout.add_widget(self.button)
-        self.add_widget(self.date_layout)
+            self.btn_text = f"{i}"                         #text/datum jednotlivych tlacitek
+            self.button = ToggleButton(text=self.btn_text) #inicializace tlacitka
+            self.button.bind(on_press=self.callback)       #spojeni tlacitka a funkce callback
+            self.date_layout.add_widget(self.button)       #pridani tlacitka do layoutu
+        self.add_widget(self.date_layout)                  #pridani layoutu tlacitek na obrazovku (do hlavniho layoutu)
 
         self.save_cancel_layout = BoxLayout(orientation='horizontal', size_hint_y=0.2)
         #pridani tlacitek pro ulozeni nebo zruseni na obrazovku
@@ -97,8 +92,7 @@ class Layout(GridLayout):
                 self.date_layout.remove_widget(child)
 
     def change_date(self, instance):
-        #vymazani predeslich tlacitek
-        self.delete_date_buttons()
+        self.delete_date_buttons() #vymazani predeslich tlacitek
 
         #vymazani predelsleho zobrazeneho mesice a roku
         self.header_layout.remove_widget(self.label1)
@@ -116,7 +110,7 @@ class Layout(GridLayout):
                 self.displayed_month = self.displayed_month + 1
         else:
             #pokud je stisknute jine tlacitko
-            #pokud je zobrazen 1. mesic tak predchozi musi byt 12. mesic
+            #když je zobrazen 1. mesic tak predchozi musi byt 12. mesic
             if self.displayed_month == 1:
                 self.displayed_month = 12
                 self.displayed_year = self.displayed_year - 1
@@ -136,20 +130,19 @@ class Layout(GridLayout):
 
 
     def callback(self,instance):
+        year = int(self.displayed_year)
+        month = int(self.displayed_month)
+        day = int(instance.text)
+
         if instance.state=="down":
-
-            year = int(self.displayed_year)
-            month = int(self.displayed_month)
-            day = int(instance.text)
-
             #print(f"{instance.text} is down")
             #print(f"year:{year}")
-            # print(f"month:{month}")
+            #print(f"month:{month}")
             #print(f"day:{day}")
             self.input_day_array.append(date( year, month, day))
             
         if instance.state=="normal":
-            self.input_day_array.remove(instance.text)
+            self.input_day_array.remove(date(year, month,day))
         #print(f"{self.input_day_array}")
 
 
@@ -159,7 +152,7 @@ class Layout(GridLayout):
 
 
     def cancel(self,instance):
-        self.input_day_array = []  #vymaze vsechny
+        self.input_day_array = []                #vymaze vsechny
         for child in self.date_layout.children:  # iteruje mezi vsemi widgety v layoutu
             if isinstance(child, ToggleButton):  # pokud je widget ToggleButton tak ho hodi do normalniho nestlaceneho modu
                 child.state = 'normal'
