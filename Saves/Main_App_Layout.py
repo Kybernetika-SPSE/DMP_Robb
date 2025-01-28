@@ -9,18 +9,79 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.toolbar import MDTopAppBar
 from kivy.core.window import Window
+from kivymd.uix.expansionpanel import MDExpansionPanel, MDExpansionPanelOneLine
+from kivymd.uix.label import MDLabel
+from kivy.metrics import dp
+from kivymd.uix.list import MDList
+from datetime import date,datetime
+import mysql.connector as database
 
+conn = database.connect(host="localhost",
+                        user="root",
+                        passwd="AhOj159/*@",
+                        database="food_schem",
+                        )
 Window.size = (360, 600)
+cursor = conn.cursor()
+
+if cursor:
+    print("Connected to MySQL database")
+
+class Content(MDBoxLayout):
+    def __init__(self, items, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.size_hint_y = None
+
+        # prizpusobeni vysky podle poctu dat expirace
+        self.items = len(items)
+        self.height = dp(48 * self.items)
+
+        for i in range(self.items):
+            horizontal_layout = MDBoxLayout(orientation="horizontal", spacing=10, padding=10)
+
+            label = MDLabel(text=f"{items[i]}", font_style='Subtitle2')
+
+            icon_button = MDIconButton(icon="close", size_hint=(None, None), pos_hint={"center_y": 0.5})
+
+            horizontal_layout.add_widget(label)
+            horizontal_layout.add_widget(icon_button)
+
+            self.add_widget(horizontal_layout)
+
+    def delete_expiration_date(self, instance):
+        #smazani data expirace po kliknuti cancel icon button
+        parent_layout = instance.parent
+
+        # Find the label in the layout
+        #for child in parent_layout.children:
+        #    if isinstance(child, MDLabel):
+                # Change the text of the label
+        #        child.text = "Text changed!"
+        #        break
 
 class DropdownMenuApp(MDApp):
     def build(self):
-        # Create the main screen
+        #ziskat vsechny data z tabulky/databaze
+        sql = """SELECT * FROM client_food_table"""
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        dates = []
+
+        #rozlozit do jednotlivych stringu oznacene ke kterym produktum patri
+        for i in range(len(result)):
+            raw_dates_str = result[i][7][:-2]
+            raw_dates = raw_dates_str.replace(" ", "")
+            dates.append(raw_dates.split(","))
+            print(dates)
+
+        #obrazovka layout
         screen = Screen()
 
-        # Create a main vertical layout
+        #layout pro expantion menu
         main_layout = MDBoxLayout(orientation="vertical")
 
-        # Add a top app bar with a search bar
+        #iniciace top app radku
         top_app_bar = MDTopAppBar(
             pos_hint={"top": 1},
             elevation=0,
@@ -29,7 +90,7 @@ class DropdownMenuApp(MDApp):
 
         )
 
-        # Add a horizontal layout inside the top app bar
+        #layout unvitr top app radku
         top_bar_layout = MDBoxLayout(
             orientation="horizontal",
             size_hint_y=1,
@@ -37,40 +98,44 @@ class DropdownMenuApp(MDApp):
             spacing = 20
         )
 
-        # Add a search icon as an MDIconButton
+        #tlacitko pro hledani v top app radku
         search_icon = MDIconButton(
-            icon="magnify",  # Material Design magnifying glass icon
+            icon="magnify",
             size_hint_x=None,
-            icon_size="30sp",  # Adjust icon size as needed
+            md_bg_color=(0.2, 0.6, 0.8, 1), #barva a alfa/pruhlednost tlacitka
+            icon_size="30sp",  # velikost
             theme_text_color="Custom",
-            text_color=(1, 1, 1, 1),  # Set the color of the icon
-            pos_hint={"center_y": 1}
+            pos_hint={"center_y": 1},
+
         )
 
-        # Add a search field
+        #radek pro zadavani hledanych slov
         search_field = MDTextField(
             hint_text="Search",
             size_hint_x=1,
             size_hint_y = None,
             height = 40,
-            line_color_focus=(1, 1, 1, 1),
-            line_color_normal=(1, 1, 1, 1),
-            text_color_normal=(1, 1, 1, 1),
-            text_color_focus=(1, 1, 1, 1),
+            line_color_normal=(0, 0, 0, 1),
+            text_color_normal=(0, 0, 0, 1),
+
+            #pri kliknuti na textove pole se muze zmenit barva car a textu
+            line_color_focus=(0, 0, 0, 1),
+            text_color_focus=(0, 0, 0, 1),
+
             mode="rectangle",
             pos_hint={"center_y": 1.1},
 
         )
 
-        # Add widgets to the horizontal layout
+        #skladani layoutu top app radku
         top_bar_layout.add_widget(search_field)
         top_bar_layout.add_widget(search_icon)
-
-        # Add the horizontal layout to the top app bar
         top_app_bar.add_widget(top_bar_layout)
 
+        #pridavani tlacitka pro skenovani caroveho kodu na obrazovku
         barcode_scan_button = MDIconButton(
-            icon = 'barcode-scan'
+            icon = 'barcode-scan',
+            md_bg_color = (0.2, 0.6, 0.8, 1)
         )
         scan_button_layout = AnchorLayout(
             anchor_x = 'right',
@@ -78,68 +143,63 @@ class DropdownMenuApp(MDApp):
             padding = 10,
         )
         scan_button_layout.add_widget(barcode_scan_button)
+
+        #pridavani tlacitka pro zadavani filtru na obrazovku
         sort_button = MDIconButton(
-            icon='sort'
+            icon='sort',
+            md_bg_color = (0.2, 0.6, 0.8, 1)
         )
         sort_button_layout = AnchorLayout(
             anchor_x = 'left',
             anchor_y = 'bottom',
             padding = 10,)
         sort_button_layout.add_widget(sort_button)
-        # ScrollView to hold all the buttons
-        scroll_view = ScrollView(
-            size_hint=(1, 1),
-            do_scroll_x=False,
-            do_scroll_y=True,
-        )
 
-        # Create a vertical BoxLayout to hold the buttons
+        #vertikalni layout pro expansion panely (MDList())
         layout = MDBoxLayout(
             orientation="vertical",
             spacing=20,
             padding=20,
             size_hint_y=None,
+            pos_hint={"center_y": -0.05},
         )
-        layout.bind(minimum_height=layout.setter("height"))  # Adjust the height dynamically
+        #layout.bind(minimum_height=layout.setter("height"))  # dynamicka vyska
 
-        menu_items = [
-            {
-                "text": f"Option {i + 1}",
-                "viewclass": "OneLineListItem",
-                "on_release": lambda x=f"Option {i + 1}": self.menu_callback(x),
-            }
-            for i in range(5)  # Generate 5 options
-        ]
+        #layout pro scrolovani
+        scroll_view = ScrollView(
+            size_hint=(1, 0),
+            do_scroll_x=False,
+            do_scroll_y=True,
+            height = Window.height,
+        )
 
-        # Generate multiple buttons
-        for i in range(15):
-            dropdown_button = MDRaisedButton(
-                text=f"Open Menu {i + 1}",
-                size_hint=(None, None),
-                size=(200, 50),
-                pos_hint={"center_x": 0.5},
-                elevation=1,
+        #layout primo pro expansion panely
+        panel_list = MDList()
+
+        scroll_view.add_widget(panel_list)
+        layout.add_widget(scroll_view)
+
+        #vypis hodnot do expansion panelu na obrazovce
+        for i in range(len(result)):
+            panel = MDExpansionPanel(
+                content=Content(
+                    items=dates[i]
+                ),
+                panel_cls=MDExpansionPanelOneLine(
+                    text=f"{result[i][1]}",
+                )
+
             )
-            layout.add_widget(dropdown_button)
+            panel_list.add_widget(panel)
 
-            # Create a dropdown menu for each button
-            dropdown_menu = MDDropdownMenu(
-                caller=dropdown_button,
-                items=menu_items,
-                width_mult=4,
-            )
-            dropdown_button.bind(on_release=lambda btn, menu=dropdown_menu: menu.open())
+        #pridani na scroll view
+        screen.add_widget(layout)
+        #vse do main layoutu
+        screen.add_widget(top_app_bar)
+        #main_layout.add_widget(top_app_bar)
 
-        # Add the layout to the ScrollView
-        scroll_view.add_widget(layout)
-
-        # Add the top app bar and the ScrollView to the main layout
-        main_layout.add_widget(top_app_bar)
-        main_layout.add_widget(scroll_view)
-
-        # Add the main layout to the screen
-
-        screen.add_widget(main_layout)
+        #maon layout na obrazovku
+        #screen.add_widget(main_layout)
         screen.add_widget(scan_button_layout)
         screen.add_widget(sort_button_layout)
         return screen

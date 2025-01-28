@@ -66,11 +66,11 @@ def upload_product_to_database(product_array):
             final_expiration_date += formatted_expiration_date + ', '
         print(f"final_expiration_date: {final_expiration_date}")
 
-        # pridani vsech expiracnich dat do database k prislusnemu produktu
-        #sql = """UPDATE client_food_table SET expiration_date = %s WHERE barcode = %s """
-        #val = (final_expiration_date,barcode)
-        #cursor.execute(sql, val)
-        #conn.commit()
+        #pridani vsech expiracnich dat do database k prislusnemu produktu
+        sql = """UPDATE client_food_table SET expiration_date = %s WHERE barcode = %s """
+        val = (final_expiration_date,barcode)
+        cursor.execute(sql, val)
+        conn.commit()
 
     else:
         url = f"https://world.openfoodfacts.org/api/v2/product/{product_array[0]}.json"
@@ -107,11 +107,5 @@ def upload_product_to_database(product_array):
         cursor.execute(sql, val)
         conn.commit()
 
-        #pro vypisovani a diagnostiku
-        for date in expiration_date.split(","):
-            date = date.replace(" ","")
-            if len(date)>0:
-                print(f"exp date: {date}")
-
-#testovaci nevimco
+#spusteni funkce
 upload_product_to_database(product_array)
