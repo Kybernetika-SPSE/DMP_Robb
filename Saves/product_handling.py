@@ -68,7 +68,7 @@ def upload_product_to_database(product_array):
 
         #pridani vsech expiracnich dat do database k prislusnemu produktu
         sql = """UPDATE client_food_table SET expiration_date = %s WHERE barcode = %s """
-        val = (final_expiration_date,barcode)
+        val = (final_expiration_date,sql_brcd)
         cursor.execute(sql, val)
         conn.commit()
 
@@ -103,7 +103,7 @@ def upload_product_to_database(product_array):
 
         # MYSQL query
         sql = """INSERT INTO client_food_table (name, brand, quantity, small_image_url, category_tags, keywords, expiration_date, barcode) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
-        val = (product_name, product_brand, quantity, small_image_url, category_tags_str, keywords_str, expiration_date, barcode)
+        val = (product_name, product_brand, quantity, small_image_url, category_tags_str, keywords_str, expiration_date, sql_brcd)
         cursor.execute(sql, val)
         conn.commit()
 

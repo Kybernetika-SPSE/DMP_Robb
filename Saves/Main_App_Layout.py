@@ -1,5 +1,6 @@
 from kivy.uix.anchorlayout import AnchorLayout
 from kivymd.app import MDApp
+from kivymd.uix.filemanager.filemanager import IconButton
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.button import MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -13,7 +14,7 @@ from kivymd.uix.expansionpanel import MDExpansionPanel, MDExpansionPanelOneLine
 from kivymd.uix.label import MDLabel
 from kivy.metrics import dp
 from kivymd.uix.list import MDList
-from datetime import date,datetime
+#from datetime import date,datetime
 import mysql.connector as database
 
 conn = database.connect(host="localhost",
@@ -28,52 +29,82 @@ if cursor:
     print("Connected to MySQL database")
 
 class Content(MDBoxLayout):
-    def __init__(self, items, **kwargs):
+    def __init__(self, items, id, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint_y = None
 
+        self.id = id
         # prizpusobeni vysky podle poctu dat expirace
+        self.dates_array = items
         self.items = len(items)
-        self.height = dp(48 * self.items)
+        self.height = dp(35 * self.items) #old dp 48
 
         for i in range(self.items):
-            horizontal_layout = MDBoxLayout(orientation="horizontal", spacing=10, padding=10)
-
+            horizontal_layout = MDBoxLayout(orientation="horizontal", spacing=10, padding=10, id = f"{i}")
             label = MDLabel(text=f"{items[i]}", font_style='Subtitle2')
 
             icon_button = MDIconButton(icon="close", size_hint=(None, None), pos_hint={"center_y": 0.5})
-
+            icon_button.bind(on_release=self.delete_expiration_date)
             horizontal_layout.add_widget(label)
             horizontal_layout.add_widget(icon_button)
 
             self.add_widget(horizontal_layout)
 
     def delete_expiration_date(self, instance):
+
         #smazani data expirace po kliknuti cancel icon button
+        parent_parent_layout = instance.parent.parent
         parent_layout = instance.parent
+        layout_id = []
+        print(f"before: {parent_layout.id}")
+        parent_parent_layout.remove_widget(parent_layout)
+        self.height -= dp(35)
 
-        # Find the label in the layout
-        #for child in parent_layout.children:
-        #    if isinstance(child, MDLabel):
-                # Change the text of the label
-        #        child.text = "Text changed!"
-        #        break
+        #update vysky contentu expansion panelu
+        #self.parent.parent.do_layout()
+        #self.parent.do_layout()
 
-class DropdownMenuApp(MDApp):
+        removed_date = ""
+        for child in parent_layout.children[:]:
+            if isinstance(child, MDLabel):
+                removed_date = child.text
+        self.dates_array.remove(removed_date)
+        #print(self.dates_array)
+
+        #odebrani data a prevedeni na string retezec pro odeslani
+        dates_array_to_string = ""
+        for date in self.dates_array:
+            dates_array_to_string += f"{date}" + ", "
+        print(dates_array_to_string)
+        str_id = str(self.id)
+        print(str_id)
+
+        #update databaze
+        sql = """UPDATE client_food_table SET expiration_date = %s WHERE ID = %s """
+        cursor.execute(sql, (dates_array_to_string, str_id))
+        conn.commit()
+
+class MainApp(MDApp):
+
     def build(self):
         #ziskat vsechny data z tabulky/databaze
         sql = """SELECT * FROM client_food_table"""
         cursor.execute(sql)
         result = cursor.fetchall()
+
         dates = []
+        str_id = []
+        #print(result)
 
         #rozlozit do jednotlivych stringu oznacene ke kterym produktum patri
         for i in range(len(result)):
             raw_dates_str = result[i][7][:-2]
             raw_dates = raw_dates_str.replace(" ", "")
             dates.append(raw_dates.split(","))
-            print(dates)
+            str_id.append(result[i][0])
+        #print(dates)
+        #print(id)
 
         #obrazovka layout
         screen = Screen()
@@ -108,9 +139,9 @@ class DropdownMenuApp(MDApp):
             pos_hint={"center_y": 1},
 
         )
-
+        search_icon.bind(on_press=self.search_action)
         #radek pro zadavani hledanych slov
-        search_field = MDTextField(
+        self.search_field = MDTextField(
             hint_text="Search",
             size_hint_x=1,
             size_hint_y = None,
@@ -123,12 +154,12 @@ class DropdownMenuApp(MDApp):
             text_color_focus=(0, 0, 0, 1),
 
             mode="rectangle",
-            pos_hint={"center_y": 1.1},
+            pos_hint={"center_y": 1.15},
 
         )
 
         #skladani layoutu top app radku
-        top_bar_layout.add_widget(search_field)
+        top_bar_layout.add_widget(self.search_field)
         top_bar_layout.add_widget(search_icon)
         top_app_bar.add_widget(top_bar_layout)
 
@@ -174,23 +205,23 @@ class DropdownMenuApp(MDApp):
         )
 
         #layout primo pro expansion panely
-        panel_list = MDList()
+        self.panel_list = MDList()
 
-        scroll_view.add_widget(panel_list)
+        scroll_view.add_widget(self.panel_list)
         layout.add_widget(scroll_view)
 
         #vypis hodnot do expansion panelu na obrazovce
         for i in range(len(result)):
             panel = MDExpansionPanel(
                 content=Content(
-                    items=dates[i]
+                    items=dates[i],
+                    id = str(str_id[i]),
                 ),
                 panel_cls=MDExpansionPanelOneLine(
                     text=f"{result[i][1]}",
                 )
-
             )
-            panel_list.add_widget(panel)
+            self.panel_list.add_widget(panel)
 
         #pridani na scroll view
         screen.add_widget(layout)
@@ -208,10 +239,45 @@ class DropdownMenuApp(MDApp):
         """Handle the menu item selection."""
         print(f"Selected: {text}")
 
-    def search_action(self, query):
+    def search_action(self, instance):
         """Handle search action."""
-        print(f"Searching for: {query}")
+        print(f"Searching for: {self.search_field.text}")
+        sql = """SELECT * FROM client_food_table  WHERE keywords LIKE %s OR category_tags LIKE %s"""
+        val = f"%{self.search_field.text}%"
+        cursor.execute(sql, (val,val))
+        result = cursor.fetchall()
+        row_id = []
+        for i in range(len(result)):
+            row_id.append(result[i][0])
 
+        for child in self.panel_list.children[:]:
+            if isinstance(child, MDExpansionPanel):
+                self.panel_list.remove_widget(child)
+
+        if len(result)>0:
+            dates = []
+
+            # rozlozit do jednotlivych stringu oznacene ke kterym produktum patri
+            for i in range(len(result)):
+                raw_dates_str = result[i][7][:-2]
+                raw_dates = raw_dates_str.replace(" ", "")
+                dates.append(raw_dates.split(","))
+                # print(dates)
+
+            for i in range(len(result)):
+                panel = MDExpansionPanel(
+                    content=Content(
+                        items=dates[i],
+                        id = str(row_id[i])
+                    ),
+                    panel_cls=MDExpansionPanelOneLine(
+                        text=f"{result[i][1]}",
+                    ),
+                )
+                self.panel_list.add_widget(panel)
+        else:
+            #print("No results found")
+            pass
 
 if __name__ == "__main__":
-    DropdownMenuApp().run()
+    MainApp().run()
