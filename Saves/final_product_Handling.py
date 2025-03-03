@@ -1,7 +1,7 @@
 import requests
 from datetime import date,datetime
 import mysql.connector as database
-
+from time import sleep
 conn = database.connect(host="localhost",
                         user="root",
                         passwd="AhOj159/*@",
@@ -16,7 +16,7 @@ if cursor:
 #exp_date = [date(2025, 2, 5), date(2025, 2, 6)]
 #product_array = [barcode, exp_date]
 
-def upload_product_to_database(product_array):
+def upload_product_to_database(product_array, refresh_function):
     # JSON soubor z url stranky
     sql_brcd = str(product_array[0])
     sql = """SELECT expiration_date FROM client_food_table WHERE barcode = %s """
@@ -30,7 +30,7 @@ def upload_product_to_database(product_array):
         #upravení stringu, ktery byl ziskan z databaze tak aby se dal upravit na date()
         expiration_date = ''
         for date in result:
-            print(f"date: {date}")
+            print(f"pridane datum k produktu v databazi: {date}")
             date_sepparated_array = date[0].split(",")
 
             #odstraneni mezer a
@@ -60,18 +60,20 @@ def upload_product_to_database(product_array):
             expiration_date.append(date)
 
         expiration_date = sorted(expiration_date)
-        print(f"expiration_date {expiration_date}")
+        #print(f"expiration_date {expiration_date}")
         #final_expiration_date = ''
         for date in expiration_date:
             formatted_expiration_date = date.strftime('%Y-%m-%d')
             final_expiration_date += formatted_expiration_date + ', '
-        print(f"final_expiration_date: {final_expiration_date}")
+        print(f"uploadnute data expirace: {final_expiration_date}")
 
         #pridani vsech expiracnich dat do database k prislusnemu produktu
         sql = """UPDATE client_food_table SET expiration_date = %s WHERE barcode = %s """
         val = (final_expiration_date,sql_brcd)
         cursor.execute(sql, val)
         conn.commit()
+        print("refresh1")
+        refresh_function()
 
     else:
         url = f"https://world.openfoodfacts.org/api/v2/product/{product_array[0]}.json"
@@ -107,6 +109,8 @@ def upload_product_to_database(product_array):
         val = (product_name, product_brand, quantity, small_image_url, category_tags_str, keywords_str, expiration_date, sql_brcd)
         cursor.execute(sql, val)
         conn.commit()
+        print("refresh2")
+        refresh_function()
 
 #spusteni funkce
 #upload_product_to_database(product_array)

@@ -18,7 +18,8 @@ from kivymd.uix.list import MDList
 import mysql.connector as database
 from final_Date_Picker import MyDatePicker
 from kivy.uix.screenmanager import Screen, ScreenManager
-from final_Barcode_Scan import BarcodeScannerApp
+#from final_Barcode_Scan import BarcodeScannerApp
+import final_Barcode_Scan as fBS
 from final_product_Handling import upload_product_to_database
 from time import sleep
 from kivy.clock import Clock
@@ -39,7 +40,7 @@ if cursor:
 class Content(MDBoxLayout):
     def __init__(self, items, id, **kwargs):
         super().__init__(**kwargs)
-        self.orientation = 'vertical'
+        self.orientation = "vertical"
         self.size_hint_y = None
 
         self.id = id
@@ -51,7 +52,7 @@ class Content(MDBoxLayout):
 
         for i in range(self.items):
             horizontal_layout = MDBoxLayout(orientation="horizontal", spacing=10, padding=10, id = f"{i}")
-            label = MDLabel(text=f"{items[i]}", font_style='Subtitle2')
+            label = MDLabel(text=f"{items[i]}", font_style="Subtitle2")
 
             icon_button = MDIconButton(icon="close", size_hint=(None, None), pos_hint={"center_y": 0.5})
             icon_button.bind(on_release=self.delete_expiration_date)
@@ -65,12 +66,14 @@ class Content(MDBoxLayout):
         #smazani data expirace po kliknuti cancel icon button
         parent_parent_layout = instance.parent.parent
         parent_layout = instance.parent
-        layout_id = []
+
+        #layout_id = []
         #print(f"before: {parent_layout.id}")
+
+        #update vysky contentu expansion panelu
         parent_parent_layout.remove_widget(parent_layout)
         self.height -= dp(35)
 
-        #update vysky contentu expansion panelu
         #self.parent.parent.do_layout()
         #self.parent.do_layout()
 
@@ -175,12 +178,12 @@ class MainApp(MDApp):
 
         #pridavani tlacitka pro skenovani caroveho kodu na obrazovku
         barcode_scan_button = MDIconButton(
-            icon = 'barcode-scan',
+            icon = "barcode-scan",
             md_bg_color = (0.2, 0.6, 0.8, 1)
         )
         scan_button_layout = AnchorLayout(
-            anchor_x = 'right',
-            anchor_y = 'bottom',
+            anchor_x = "right",
+            anchor_y = "bottom",
             padding = 10,
         )
         barcode_scan_button.bind(on_press=self.scan_barcode)
@@ -188,12 +191,13 @@ class MainApp(MDApp):
 
         #pridavani tlacitka pro zadavani filtru na obrazovku
         sort_button = MDIconButton(
-            icon='sort',
+            icon= "sort",
             md_bg_color = (0.2, 0.6, 0.8, 1)
         )
+        #sort_button.bind(on_press=self.refresh_app())
         sort_button_layout = AnchorLayout(
-            anchor_x = 'left',
-            anchor_y = 'bottom',
+            anchor_x = "left",
+            anchor_y = "bottom",
             padding = 10,)
         sort_button_layout.add_widget(sort_button)
 
@@ -248,48 +252,58 @@ class MainApp(MDApp):
 
     #def close_popup(self):
     def refresh_app(self, *args ):
-        print("refresh app =============================================")
-        self.panel_list.clear_widgets()
+        print("Obnoveni aplikace =============================================")
 
-        fetched_dates = []
-        fetched_str_id = []
+        for child in self.panel_list.children[:]:  # Iterate over a copy to avoid errors
+            self.panel_list.remove_widget(child)
 
         sql = """SELECT * FROM client_food_table"""
-
+        conn = database.connect(host="localhost",
+                                user="root",
+                                passwd="AhOj159/*@",
+                                database="food_schem",
+                                )
+        cursor = conn.cursor()
         cursor.execute(sql)
-        sleep(0.5)
-        fetched_result = cursor.fetchall()
+        result = cursor.fetchall()
+        print(result)
+        print(result[0])
+        row_id = []
+        for i in range(len(result)):
+            row_id.append(result[i][0])
 
-        print(f"fetched result: {fetched_result}")
-        # rozlozit do jednotlivych stringu oznacene ke kterym produktum patri
-        for i in range(len(fetched_result)):
-            raw_dates_str = fetched_result[i][7][:-2]
-            raw_dates = raw_dates_str.replace(" ", "")
-            fetched_dates.append(raw_dates.split(","))
-            print(fetched_dates[i])
-            fetched_str_id.append(fetched_result[i][0])
 
-            # Create new expansion panels with the refreshed data
-        for i in range(len(fetched_result)):
-            self.panel = MDExpansionPanel(
-                content=Content(
-                    items=fetched_dates[i],
-                    id=str(fetched_str_id[i]),
-                ),
-                panel_cls=MDExpansionPanelOneLine(
-                    text=f"{fetched_result[i][1]}",
+
+        for child in self.panel_list.children[:]:
+            if isinstance(child, MDExpansionPanel):
+                self.panel_list.remove_widget(child)
+
+        if len(result) > 0:
+            dates = []
+
+            # rozlozit do jednotlivych stringu oznacene ke kterym produktum patri
+            for i in range(len(result)):
+                raw_dates_str = result[i][7][:-2]
+                raw_dates = raw_dates_str.replace(" ", "")
+                dates.append(raw_dates.split(","))
+                # print(dates)
+            print("extrahovana data expirace:",dates)
+            for i in range(len(result)):
+                panel = MDExpansionPanel(
+                    content=Content(
+                        items=dates[i],
+                        id=str(row_id[i])
+                    ),
+                    panel_cls=MDExpansionPanelOneLine(
+                        text=f"{result[i][1]}",
+                    ),
                 )
-            )
-            self.panel_list.add_widget(self.panel)
-        print("Updated dates:", fetched_dates)
-        print("Updated str_id:", fetched_str_id)
+                self.panel_list.add_widget(panel)
     def scan_barcode(self, instance):
-
-
-        #self.barcode_Scan_Overlay = BarcodeScannerApp()
+        #self.barcode_Scan_Overlay = fBS.BarcodeScannerApp()
         #self.barcode_Scan_Overlay.open_barcode_scanner()
 
-        self.barcode_scanner = BarcodeScannerApp(self.get_scanned_barcode)
+        self.barcode_scanner = fBS.BarcodeScannerApp(self.get_scanned_barcode)
         self.barcode_scanner.open_barcode_scanner()
 
         #print(f"scan barcode")
@@ -317,13 +331,13 @@ class MainApp(MDApp):
         self.date_Picker_Overlay.open_date_picker()
 
     def get_exp_dates(self, exp_dates):
-        print(f"product_array: {self.product_array}")
+        #print(f"product_array: {self.product_array}")
         self.product_array.append(exp_dates)
         #print(self.product_array)
-        print("product_uploaded")
-        upload_product_to_database(self.product_array)
-        Clock.schedule_once(self.refresh_app, 0.5)
 
+        print("Funkce ktera vola synchronizaci zapnuta")
+        upload_product_to_database(self.product_array, self.refresh_app)
+        #Clock.schedule_once(self.refresh_app, 0.5)
 
     def search_action(self, instance):
 

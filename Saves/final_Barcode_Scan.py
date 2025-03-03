@@ -1,8 +1,8 @@
 from kivy.lang import Builder
 from kivy.uix.popup import Popup
 from kivymd.app import MDApp
-
 from cv2 import VideoCapture, flip, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image
 from kivy.clock import Clock
 from kivy.graphics.texture import Texture
@@ -46,11 +46,9 @@ class BarcodeScannerApp(Popup):
 
         self.barcode_detected_array = []
         self.product_info = []
-
         self.capture = VideoCapture(0)
         self.capture.set(CAP_PROP_FRAME_WIDTH, 960)
         self.capture.set(CAP_PROP_FRAME_HEIGHT, 576)
-
         Clock.schedule_interval(self.update, 1.0 / 30.0)
         self.popout_close_bool = False
 

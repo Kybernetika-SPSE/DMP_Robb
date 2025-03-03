@@ -13,7 +13,7 @@ from kivy.uix.gridlayout import GridLayout
 
 
 class MyDatePicker(Popup):
-    def __init__(self, callback, **kwargs):
+    def __init__(self, callback,  **kwargs):
         super().__init__(**kwargs)
         self.title = "Select Date"
         self.size_hint = (1, 1)  # Set the popup to take up the entire screen
@@ -162,5 +162,7 @@ class MyDatePicker(Popup):
 
     def dates_picked(self, exp_dates):
         self.dates = exp_dates
+        print("dates picked successfully")
         self.callback(self.dates)
+
 
