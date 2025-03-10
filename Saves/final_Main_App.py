@@ -1,27 +1,20 @@
+from final_product_Handling import upload_product_to_database, execute_mysql_querry, update_mysql_dtb, get_prod_mysql_dtb
+from kivymd.uix.expansionpanel import MDExpansionPanel, MDExpansionPanelOneLine
+from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.uix.anchorlayout import AnchorLayout
-from kivymd.app import MDApp
-from kivymd.uix.filemanager.filemanager import IconButton
-from kivymd.uix.menu import MDDropdownMenu
-from kivymd.uix.button import MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivy.uix.screenmanager import Screen
-from kivy.uix.scrollview import ScrollView
 from kivymd.uix.textfield import MDTextField
+from kivy.uix.scrollview import ScrollView
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.toolbar import MDTopAppBar
-from kivy.core.window import Window
-from kivymd.uix.expansionpanel import MDExpansionPanel, MDExpansionPanelOneLine
-from kivymd.uix.label import MDLabel
-from kivy.metrics import dp
-from kivymd.uix.list import MDList
-#from datetime import date,datetime
-import mysql.connector as database
 from final_Date_Picker import MyDatePicker
-from kivy.uix.screenmanager import Screen, ScreenManager
-#from final_Barcode_Scan import BarcodeScannerApp
+from kivymd.uix.label import MDLabel
+from kivy.core.window import Window
+from kivymd.uix.list import MDList
+import mysql.connector as database
 import final_Barcode_Scan as fBS
-from final_product_Handling import upload_product_to_database
-import time
+from kivymd.app import MDApp
+from kivy.metrics import dp
 import json
 
 with open("dtb_config.json","r") as config_file:
@@ -83,19 +76,21 @@ class Content(MDBoxLayout):
 
         #pokud uzivatel smaze vsechna data expirace zaznam/radek se vymaze
         if len(dates_array_to_string)>0:
-            conn.reconnect()
-            sql = """UPDATE client_food_table SET expiration_date = %s WHERE ID = %s """
-            cursor.execute(sql, (dates_array_to_string, self.str_id))
-            conn.commit()
-            conn.close()
+            update_mysql_dtb("UPDATE client_food_table SET expiration_date = %s WHERE ID = %s ", (dates_array_to_string, self.str_id))
+            #conn.reconnect()
+            #sql = """UPDATE client_food_table SET expiration_date = %s WHERE ID = %s """
+            #cursor.execute(sql, (dates_array_to_string, self.str_id))
+            #conn.commit()
+            #conn.close()
 
         else:
             #kdyz vymazeme posledni datum expirace vymaze se i produkt
-            conn.reconnect()
-            sql = """DELETE FROM client_food_table WHERE ID = %s;"""
-            cursor.execute(sql, (self.str_id,))
-            conn.commit()
-            conn.close()
+            update_mysql_dtb("DELETE FROM client_food_table WHERE ID = %s;", (dates_array_to_string, self.str_id))
+            #conn.reconnect()
+            #sql = """DELETE FROM client_food_table WHERE ID = %s;"""
+            #cursor.execute(sql, (self.str_id,))
+            #conn.commit()
+            #conn.close()
 
             self.product_container.remove_widget(parent_parent_layout.parent)
 
@@ -104,9 +99,10 @@ class MainApp(MDApp):
     def build(self):
 
         #ziskat vsechny data z tabulky/databaze
-        sql = """SELECT * FROM client_food_table"""
-        cursor.execute(sql)
-        self.result = cursor.fetchall()
+        #sql = """SELECT * FROM client_food_table"""
+        #cursor.execute(sql)
+        #self.result = cursor.fetchall()
+        self.result = execute_mysql_querry("SELECT * FROM client_food_table")
 
         self.dates = []
         self.str_id = []
@@ -254,12 +250,12 @@ class MainApp(MDApp):
         for child in self.panel_list.children[:]:  # Iterate over a copy to avoid errors
             self.panel_list.remove_widget(child)
 
-        conn.reconnect()
-        sql = """SELECT * FROM client_food_table"""
-        cursor = conn.cursor()
-        cursor.execute(sql)
-        result = cursor.fetchall()
-        conn.close()
+        #conn.reconnect()
+        #sql = """SELECT * FROM client_food_table"""
+        #cursor = conn.cursor()
+        #cursor.execute(sql)
+        result = execute_mysql_querry("SELECT * FROM client_food_table")
+        #conn.close()
 
         #print(result)
         #print(result[0])
@@ -320,15 +316,16 @@ class MainApp(MDApp):
     def search_action(self, instance):
         print("search activated")
         conn.reconnect()
-        sql = """SELECT * FROM client_food_table WHERE keywords LIKE %s OR category_tags LIKE %s"""
-
+        #sql = """SELECT * FROM client_food_table WHERE keywords LIKE %s OR category_tags LIKE %s"""
         val = f'%{self.search_field.text}%'
-        cursor.execute(sql, (val,val))
-        time.sleep(0.1)
-        result = cursor.fetchall()
-        conn.close()
+        #cursor.execute(sql, (val,val))
+        #time.sleep(0.1)
+        #result = cursor.fetchall()
+        #conn.close()
 
-        print(f"search result from database: {result}")
+        result = get_prod_mysql_dtb("SELECT * FROM client_food_table WHERE keywords LIKE %s OR category_tags LIKE %s",(val,val))
+
+        #print(f"search result from database: {result}")
         row_id = []
 
         for i in range(len(result)):

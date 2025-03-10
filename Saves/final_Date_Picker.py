@@ -175,5 +175,3 @@ class MyDatePicker(Popup):
         self.dates = exp_dates
         print("dates picked successfully")
         self.callback(self.dates)
-
-
