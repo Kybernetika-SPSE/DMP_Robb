@@ -1,14 +1,10 @@
-from kivy.lang import Builder
-from kivy.uix.popup import Popup
-from kivymd.app import MDApp
 from cv2 import VideoCapture, flip, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.image import Image
-from kivy.clock import Clock
 from kivy.graphics.texture import Texture
+from kivy.uix.popup import Popup
 from pyzbar.pyzbar import decode
 from collections import Counter
-from kivymd.uix.pickers import MDDatePicker
+from kivy.lang import Builder
+from kivy.clock import Clock
 
 KV = '''
 MDBoxLayout:
@@ -26,9 +22,8 @@ MDBoxLayout:
         size_hint: None, None
         size: dp(56), dp(56)
         pos_hint: {'center_x': .5, 'center_y': .5}
-        on_press: close_self
+        on_press: app.barcode_scanner.close_self()
 '''
-
 
 class BarcodeScannerApp(Popup):
     def __init__(self, callback, **kwargs):
@@ -50,16 +45,13 @@ class BarcodeScannerApp(Popup):
         self.capture.set(CAP_PROP_FRAME_WIDTH, 960)
         self.capture.set(CAP_PROP_FRAME_HEIGHT, 576)
         Clock.schedule_interval(self.update, 1.0 / 30.0)
-        self.popout_close_bool = False
 
     def scan_complete(self, scanned_code):
         self.barcode = scanned_code
         self.callback(self.barcode)
 
-
     def open_barcode_scanner(self):
         self.open()
-
 
     def update(self, dt):
         ret, frame = self.capture.read()
@@ -88,13 +80,8 @@ class BarcodeScannerApp(Popup):
                 self.barcode_detected_array.clear()
                 self.close_self()
 
-#        self.capture.release()
-#        self.clear_widgets()
-
-    def get_close_bool(self):
-        return self.popout_close_bool
-
     def close_self(self):
+
         self.capture.release()
         self.dismiss()
 
@@ -106,9 +93,3 @@ class BarcodeScannerApp(Popup):
 #    def show_barcode_popup(self):
 #        self.popup = BarcodeScannerApp()
 #        self.popup.open_barcode_scanner()
-
-
-
-# Run the app
-#if __name__ == "__main__":
-#    HlavniApka().run()
