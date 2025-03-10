@@ -1,7 +1,0 @@
-{
-    "host": "mysql-database-fridge-database-maturita.i.aivencloud.com",
-    "user": "avnadmin",
-    "passwd": "AVNS_cm9FRnWakqiiuXBng6y",
-    "database": "food_schem",
-    "port": 16794
-}

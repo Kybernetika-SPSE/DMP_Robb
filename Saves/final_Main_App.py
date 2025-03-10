@@ -28,11 +28,6 @@ with open("dtb_config.json","r") as config_file:
     config = json.load(config_file)
 conn = database.connect(**config)
 
-#host="localhost",
-#user="root",
-#passwd="AhOj159/*@",
-#database="food_schem",
-
 cursor = conn.cursor()
 #testovaci pevne dana velikost okna
 Window.size = (360, 600)
