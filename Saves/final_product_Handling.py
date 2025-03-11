@@ -1,54 +1,46 @@
-import requests
 from datetime import date,datetime
 import mysql.connector as database
 from kivy.clock import Clock
+import requests
 import json
 
 with open("dtb_config.json","r") as config_file:
     config = json.load(config_file)
 conn = database.connect(**config)
-
 cursor = conn.cursor()
 
-#if cursor:
-#    print("Connected to MySQL Server")
-
-#testvaci hodnoty
-#barcode = 20093358
-#exp_date = [date(2025, 2, 5), date(2025, 2, 6)]
-#product_array = [barcode, exp_date]
-
+#metoda pro vykonani mysql prikazu
 def execute_mysql_querry(mysql_query):
     conn.reconnect()
     cursor.execute(mysql_query)
     result = cursor.fetchall()
-    conn.commit()
     return result
 
+#metoda pro updae databaze
 def update_mysql_dtb(mysql_query, values):
     conn.reconnect()
     cursor.execute(mysql_query,values)
     conn.commit()
 
-def get_prod_mysql_dtb(mysql_query, values):
+def search_mysql_dtb(mysql_query, values):
     conn.reconnect()
     cursor.execute(mysql_query, values)
     result = cursor.fetchall()
     return result
 
 def upload_product_to_database(product_array, refresh_function):
-    #pullovani JSON soubor z url stranky
+    #upload
     sql_brcd = str(product_array[0])
     #sql = """SELECT expiration_date FROM client_food_table WHERE barcode = %s """
     #cursor.execute(sql,(sql_brcd,))
     #result = cursor.fetchall()
 
-    result = get_prod_mysql_dtb("SELECT expiration_date FROM client_food_table WHERE barcode = %s ",(sql_brcd,))
+    result = search_mysql_dtb("SELECT expiration_date FROM client_food_table WHERE barcode = %s ", (sql_brcd,))
 
     final_expiration_date = ""
     if len(result)>0:
-        #produkt jiz v databazi je a tak staci jen k jeho zaznamu pridat nove nahrane data expirace
-        #upravení stringu, ktery byl ziskan z databaze tak aby se dal upravit na date()
+        #produkt je v databazi
+        #pridame jen expiracni data k zaznamu
 
         expiration_date = ""
         for date in result:
@@ -98,7 +90,6 @@ def upload_product_to_database(product_array, refresh_function):
         conn.close()
         #obnoveni aplikace
         Clock.schedule_once(refresh_function,0.1)
-
     else:
         #produkt jeste nema zaznam v databazi
         url = f"https://world.openfoodfacts.org/api/v2/product/{product_array[0]}.json"
@@ -118,7 +109,6 @@ def upload_product_to_database(product_array, refresh_function):
         #filtrovani/kategorie
         category_tags = product_api_data.get('categories_tags', 'Unknown')
 
-        #if product_name != 'Unknown' or category_tags != 'Unknown' or keywords != 'Unknown':
         category_tags_str = ', '.join([tag.split(":")[1] for tag in category_tags])
         keywords_str = ', '.join(keywords)
 
@@ -137,7 +127,7 @@ def upload_product_to_database(product_array, refresh_function):
         #cursor.execute(sql, val)
         #conn.commit()
 
-        # uzavreni pripojeni databaze kvuli spravne aktualizaci databaze
+        #uzavreni pripojeni databaze kvuli spravne aktualizaci databaze
         conn.close()
         #obnoveni aplikace
         Clock.schedule_once(refresh_function,0.1)

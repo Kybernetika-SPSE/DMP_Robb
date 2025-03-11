@@ -1,6 +1,5 @@
-from final_product_Handling import upload_product_to_database, execute_mysql_querry, update_mysql_dtb, get_prod_mysql_dtb
+from final_product_Handling import upload_product_to_database, execute_mysql_querry, update_mysql_dtb, search_mysql_dtb
 from kivymd.uix.expansionpanel import MDExpansionPanel, MDExpansionPanelOneLine
-from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.uix.anchorlayout import AnchorLayout
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.textfield import MDTextField
@@ -8,6 +7,7 @@ from kivy.uix.scrollview import ScrollView
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.toolbar import MDTopAppBar
 from final_Date_Picker import MyDatePicker
+from kivy.uix.screenmanager import Screen
 from kivymd.uix.label import MDLabel
 from kivy.core.window import Window
 from kivymd.uix.list import MDList
@@ -17,20 +17,20 @@ from kivymd.app import MDApp
 from kivy.metrics import dp
 import json
 
+#nacteni prohlasovacich udaju databaze z json souboru
 with open("dtb_config.json","r") as config_file:
     config = json.load(config_file)
 conn = database.connect(**config)
-
 cursor = conn.cursor()
+
 #testovaci pevne dana velikost okna
 Window.size = (360, 600)
 
-if cursor:
-    print("Connected to MySQL database")
-
 class Content(MDBoxLayout):
     def __init__(self, items, id, product_container, **kwargs):
+        #zdedeni parametru materske tridy
         super().__init__(**kwargs)
+
         self.orientation = "vertical"
         self.size_hint_y = None
         self.id = id
@@ -41,10 +41,12 @@ class Content(MDBoxLayout):
         self.items = len(items)
         self.height = dp(35 * self.items) #old dp 48
 
+        #generovani jednotlivych exp dat v expansion listu
         for i in range(self.items):
             horizontal_layout = MDBoxLayout(orientation="horizontal", spacing=10, padding=10, id = f"{i}")
             label = MDLabel(text=f"{items[i]}", font_style="Subtitle2")
 
+            #tlacitko pro smazani jednotlivych exp dat
             icon_button = MDIconButton(icon="close", size_hint=(None, None), pos_hint={"center_y": 0.5})
             icon_button.bind(on_release=self.delete_expiration_date)
             horizontal_layout.add_widget(label)
@@ -53,7 +55,6 @@ class Content(MDBoxLayout):
             self.add_widget(horizontal_layout)
 
     def delete_expiration_date(self, instance):
-
         #smazani data expirace po kliknuti cancel icon button
         parent_parent_layout = instance.parent.parent
         parent_layout = instance.parent
@@ -97,7 +98,6 @@ class Content(MDBoxLayout):
 class MainApp(MDApp):
 
     def build(self):
-
         #ziskat vsechny data z tabulky/databaze
         #sql = """SELECT * FROM client_food_table"""
         #cursor.execute(sql)
@@ -124,7 +124,6 @@ class MainApp(MDApp):
             elevation=0,
             md_bg_color=(0.2, 0.6, 0.8, 1),  # Customize background color
             height=100,  # App bar height
-
         )
 
         #layout unvitr top app radku
@@ -143,7 +142,6 @@ class MainApp(MDApp):
             icon_size="30sp",  # velikost
             theme_text_color="Custom",
             pos_hint={"center_y": 1},
-
         )
         search_icon.bind(on_press=self.search_action)
 
@@ -162,7 +160,6 @@ class MainApp(MDApp):
 
             mode="rectangle",
             pos_hint={"center_y": 1.15},
-
         )
 
         #skladani layoutu top app radku
@@ -189,7 +186,6 @@ class MainApp(MDApp):
             icon= "sort",
             md_bg_color = (0.2, 0.6, 0.8, 1)
         )
-        #sort_button.bind(on_press=self.refresh_app())
         sort_button_layout = AnchorLayout(
             anchor_x = "left",
             anchor_y = "bottom",
@@ -204,7 +200,6 @@ class MainApp(MDApp):
             size_hint_y=None,
             pos_hint={"center_y": -0.05},
         )
-        #layout.bind(minimum_height=layout.setter("height"))  # dynamicka vyska
 
         #layout pro scrolovani
         scroll_view = ScrollView(
@@ -214,7 +209,7 @@ class MainApp(MDApp):
             height = Window.height,
         )
 
-        #layout primo pro expansion panely
+        #layout urceny pro expansion panely
         self.panel_list = MDList()
 
         scroll_view.add_widget(self.panel_list)
@@ -237,16 +232,14 @@ class MainApp(MDApp):
 
         #pridani na scroll view
         screen.add_widget(layout)
+
         #vse do main layoutu
         screen.add_widget(top_app_bar)
         screen.add_widget(scan_button_layout)
         screen.add_widget(sort_button_layout)
         return screen
 
-    #def close_popup(self):
     def refresh_app(self, *args ):
-        #print("Obnoveni aplikace =============================================")
-
         for child in self.panel_list.children[:]:  # Iterate over a copy to avoid errors
             self.panel_list.remove_widget(child)
 
@@ -256,9 +249,6 @@ class MainApp(MDApp):
         #cursor.execute(sql)
         result = execute_mysql_querry("SELECT * FROM client_food_table")
         #conn.close()
-
-        #print(result)
-        #print(result[0])
 
         row_id = []
         for i in range(len(result)):
@@ -276,9 +266,6 @@ class MainApp(MDApp):
                 raw_dates_str = result[i][7][:-2]
                 raw_dates = raw_dates_str.replace(" ", "")
                 dates.append(raw_dates.split(","))
-                # print(dates)
-
-            #print("extrahovana data expirace:",dates)
 
             for i in range(len(result)):
                 panel = MDExpansionPanel(
@@ -314,7 +301,6 @@ class MainApp(MDApp):
         upload_product_to_database(self.product_array, self.refresh_app)
 
     def search_action(self, instance):
-        print("search activated")
         conn.reconnect()
         #sql = """SELECT * FROM client_food_table WHERE keywords LIKE %s OR category_tags LIKE %s"""
         val = f'%{self.search_field.text}%'
@@ -323,11 +309,9 @@ class MainApp(MDApp):
         #result = cursor.fetchall()
         #conn.close()
 
-        result = get_prod_mysql_dtb("SELECT * FROM client_food_table WHERE keywords LIKE %s OR category_tags LIKE %s",(val,val))
+        result = search_mysql_dtb("SELECT * FROM client_food_table WHERE keywords LIKE %s OR category_tags LIKE %s", (val, val))
 
-        #print(f"search result from database: {result}")
         row_id = []
-
         for i in range(len(result)):
             row_id.append(result[i][0])
 
@@ -337,13 +321,11 @@ class MainApp(MDApp):
 
         if len(result)>0:
             dates = []
-
             # rozlozit do jednotlivych stringu oznacene ke kterym produktum patri
             for i in range(len(result)):
                 raw_dates_str = result[i][7][:-2]
                 raw_dates = raw_dates_str.replace(" ", "")
                 dates.append(raw_dates.split(","))
-                # print(dates)
 
             for i in range(len(result)):
                 panel = MDExpansionPanel(

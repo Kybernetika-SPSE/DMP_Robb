@@ -60,7 +60,6 @@ class BarcodeScannerApp(Popup):
             decoded_objects = decode(frame)
             for obj in decoded_objects:
                 barcode_data = obj.data.decode()
-                #print("detekovan:", barcode_data)
                 self.barcode_detected_array.append(barcode_data)
 
             buf = flip(frame, -1).tobytes()
@@ -74,8 +73,7 @@ class BarcodeScannerApp(Popup):
             # Samplovani carovych kodu
             if len(self.barcode_detected_array) >= 10:
                 array_counter = Counter(self.barcode_detected_array)
-                self.barcode = array_counter.most_common(1)[0][0]  # Most common barcode
-                #print(f"Scanned Barcode: {self.barcode}")
+                self.barcode = array_counter.most_common(1)[0][0]
                 self.scan_complete(self.barcode)
                 self.barcode_detected_array.clear()
                 self.close_self()

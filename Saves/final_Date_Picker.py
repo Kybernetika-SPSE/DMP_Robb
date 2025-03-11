@@ -1,16 +1,13 @@
 from kivy.uix.anchorlayout import AnchorLayout
-from kivy.uix.screenmanager import Screen
 from kivymd.uix.stacklayout import StackLayout
+from kivymd.uix.button import MDRaisedButton
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivy.uix.gridlayout import GridLayout
 from kivymd.uix.label import MDLabel
 from kivy.uix.popup import Popup
 from datetime import datetime
-from kivymd.app import MDApp
-from kivymd.uix.button import MDRaisedButton
-from kivymd.uix.boxlayout import MDBoxLayout
 from datetime import date
 import calendar
-from kivy.uix.gridlayout import GridLayout
-
 
 class MyDatePicker(Popup):
     def __init__(self, callback,  **kwargs):
@@ -157,7 +154,6 @@ class MyDatePicker(Popup):
         self.selected_dates_displayed_layout.remove_widget(instance)
 
     def save(self, instance):
-        #print(f"Saved values: {self.input_day_array}")
         self.output_day_array = self.input_day_array
         self.dates_picked(self.output_day_array)
         #self.close_callback()
@@ -173,5 +169,4 @@ class MyDatePicker(Popup):
 
     def dates_picked(self, exp_dates):
         self.dates = exp_dates
-        print("dates picked successfully")
         self.callback(self.dates)
