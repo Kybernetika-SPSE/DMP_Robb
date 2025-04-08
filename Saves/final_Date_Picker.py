@@ -4,8 +4,10 @@ from kivymd.uix.button import MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivymd.uix.label import MDLabel
+from kivy.core.window import Window
 from kivy.uix.popup import Popup
 from datetime import datetime
+from kivy.metrics import dp
 from datetime import date
 import calendar
 
@@ -17,8 +19,8 @@ class MyDatePicker(Popup):
         self.title = "Select Date"
         self.size_hint = (1, 1)
         self.background_color = (1, 1, 1, 0)
-        self.spacing = [0,0,0,0]
-        self.padding = [-20,0,0,0]
+        self.spacing = [dp(0),dp(0),dp(0),dp(0)]
+        self.padding = [dp(-20),dp(0),dp(0),dp(0)]
         self.input_day_array = []
 
         #definovani promennych a funkci, ktere jsou globalni ve teto tride
@@ -41,9 +43,9 @@ class MyDatePicker(Popup):
         main_layout = StackLayout(
             orientation='tb-lr',
             size_hint=(1, None),
-            height=600,
-            padding=[10, 10],
-            spacing=30,
+            height=Window.height,
+            padding=[dp(10), dp(10)],
+            spacing=dp(20),
             pos_hint={'top': 1}
         )
 
@@ -52,7 +54,7 @@ class MyDatePicker(Popup):
             text=f"{self.month_dict[self.displayed_month]} {self.displayed_year}",
             halign='center',
             size_hint_y=None,
-            height=30,
+            height=dp(30),
             font_style='Subtitle1',
             size_hint_x=1,
             theme_text_color='Custom',
@@ -62,12 +64,12 @@ class MyDatePicker(Popup):
         main_layout.add_widget(self.label1)
 
         #vytvoreni layoutu pro zmenu mesice
-        month_change_layout_container = AnchorLayout(anchor_x='center', size_hint=(1, None), height=40)
-        month_change_layout = MDBoxLayout(orientation='horizontal', size_hint=(None, None), width=170, spacing=5, height=40)
+        month_change_layout_container = AnchorLayout(anchor_x='center', size_hint=(1.1, None), height=dp(40))
+        month_change_layout = MDBoxLayout(orientation='horizontal', size_hint=(None, None), width=dp(Window.width/2), spacing=dp(5), height=dp(40))
 
         #definovani tlacitek pro zmenu mesice
-        month_add = MDRaisedButton(text=">", size_hint=(None, None), size=(40, 40))
-        month_subtract = MDRaisedButton(text="<", size_hint=(None, None), size=(40, 40))
+        month_add = MDRaisedButton(text=">", size_hint=(None, None), size=(dp(30), dp(40)))
+        month_subtract = MDRaisedButton(text="<", size_hint=(None, None), size=(dp(30), dp(40)))
         month_add.bind(on_press=self.change_date)
         month_subtract.bind(on_press=self.change_date)
 
@@ -79,12 +81,12 @@ class MyDatePicker(Popup):
         main_layout.add_widget(month_change_layout_container)
 
         self.selected_dates_displayed_layout = MDBoxLayout(
-            orientation='horizontal', size_hint=(1, None), size=(300, 40), spacing=5, padding=[5, 0, 0, 0]
+            orientation='horizontal', size_hint=(1, None), size=(dp(100), dp(40)), spacing=dp(5), padding=[dp(5), dp(0), dp(0), dp(0)]
         )
         main_layout.add_widget(self.selected_dates_displayed_layout)
 
-        date_layout_container = AnchorLayout(anchor_x='center', size_hint=(1, None), height=300)
-        self.date_layout = GridLayout(cols=5, spacing=5, padding=[0, 10, 30, 10], size_hint_y=None)
+        date_layout_container = AnchorLayout(anchor_x='center', size_hint=(1, None), height=dp(300))
+        self.date_layout = GridLayout(cols=5, spacing=dp(5), padding=[dp(0), dp(10), dp(30), dp(10)], size_hint_y=None)
         self.date_layout.bind(minimum_height=self.date_layout.setter('height'))
 
         self.generate_date_buttons()
@@ -99,7 +101,7 @@ class MyDatePicker(Popup):
         cancel_button.bind(on_press=self.cancel)
 
         #zobrazenovani save a cancel tlacitek
-        save_cancel_layout = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=50, spacing=10)
+        save_cancel_layout = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(20), spacing=dp(10))
         save_cancel_layout.add_widget(cancel_button)
         save_cancel_layout.add_widget(save_button)
         main_layout.add_widget(save_cancel_layout)
@@ -111,7 +113,7 @@ class MyDatePicker(Popup):
         self.date_layout.clear_widgets()
         for i in range(1, calendar.monthrange(self.displayed_year, self.displayed_month)[1] + 1):
             btn_text = f"{i}"
-            button = MDRaisedButton(text=btn_text, size_hint=(None, None), size=(200, 40))
+            button = MDRaisedButton(text=btn_text, size_hint=(None, None), size=(dp(100), dp(40)))
             button.bind(on_press=self.date_buttons_callback)
             self.date_layout.add_widget(button)
 
@@ -154,10 +156,13 @@ class MyDatePicker(Popup):
         self.selected_dates_displayed_layout.remove_widget(instance)
 
     def save(self, instance):
-        self.output_day_array = self.input_day_array
-        self.dates_picked(self.output_day_array)
-        #self.close_callback()
-        self.dismiss()
+        if self.input_day_array == []:
+            pass
+        else:
+            self.output_day_array = self.input_day_array
+            self.dates_picked(self.output_day_array)
+            #self.close_callback()
+            self.dismiss()
 
     def close_self(self):
         self.dismiss()

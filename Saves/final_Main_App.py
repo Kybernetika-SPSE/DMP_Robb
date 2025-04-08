@@ -1,5 +1,6 @@
-from final_product_Handling import upload_product_to_database, execute_mysql_querry, update_mysql_dtb, search_mysql_dtb
+from final_product_Handling import upload_product_to_database, execute_mysql_querry, update_mysql_dtb, search_mysql_dtb, get_json_response
 from kivymd.uix.expansionpanel import MDExpansionPanel, MDExpansionPanelOneLine
+from product_not_found import ProductNotFoundPopup as pNFP
 from kivy.uix.anchorlayout import AnchorLayout
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.textfield import MDTextField
@@ -16,6 +17,8 @@ import final_Barcode_Scan as fBS
 from kivymd.app import MDApp
 from kivy.metrics import dp
 import json
+
+#Window.maximize()
 
 #nacteni prohlasovacich udaju databaze z json souboru
 with open("dtb_config.json","r") as config_file:
@@ -43,7 +46,7 @@ class Content(MDBoxLayout):
 
         #generovani jednotlivych exp dat v expansion listu
         for i in range(self.items):
-            horizontal_layout = MDBoxLayout(orientation="horizontal", spacing=10, padding=10, id = f"{i}")
+            horizontal_layout = MDBoxLayout(orientation="horizontal", spacing=dp(10), padding=dp(10), id = f"{i}")
             label = MDLabel(text=f"{items[i]}", font_style="Subtitle2")
 
             #tlacitko pro smazani jednotlivych exp dat
@@ -78,35 +81,23 @@ class Content(MDBoxLayout):
         #pokud uzivatel smaze vsechna data expirace zaznam/radek se vymaze
         if len(dates_array_to_string)>0:
             update_mysql_dtb("UPDATE client_food_table SET expiration_date = %s WHERE ID = %s ", (dates_array_to_string, self.str_id))
-            #conn.reconnect()
-            #sql = """UPDATE client_food_table SET expiration_date = %s WHERE ID = %s """
-            #cursor.execute(sql, (dates_array_to_string, self.str_id))
-            #conn.commit()
-            #conn.close()
-
         else:
             #kdyz vymazeme posledni datum expirace vymaze se i produkt
             update_mysql_dtb("DELETE FROM client_food_table WHERE ID = %s;", (dates_array_to_string, self.str_id))
-            #conn.reconnect()
-            #sql = """DELETE FROM client_food_table WHERE ID = %s;"""
-            #cursor.execute(sql, (self.str_id,))
-            #conn.commit()
-            #conn.close()
-
             self.product_container.remove_widget(parent_parent_layout.parent)
 
 class MainApp(MDApp):
 
     def build(self):
-        #ziskat vsechny data z tabulky/databaze
-        #sql = """SELECT * FROM client_food_table"""
-        #cursor.execute(sql)
-        #self.result = cursor.fetchall()
         self.result = execute_mysql_querry("SELECT * FROM client_food_table")
 
         self.dates = []
         self.str_id = []
         self.product_array = []
+
+        self.prd_not_found = pNFP()
+
+        self.brcd_for_dtb_search = 0
 
         #rozlozit do jednotlivych stringu oznacene ke kterym produktum patri
         for i in range(len(self.result)):
@@ -130,8 +121,8 @@ class MainApp(MDApp):
         top_bar_layout = MDBoxLayout(
             orientation="horizontal",
             size_hint_y=1,
-            padding=(0, 0),
-            spacing = 20
+            padding=(dp(0), dp(0)),
+            spacing = dp(20)
         )
 
         #tlacitko pro hledani v top app radku
@@ -150,7 +141,7 @@ class MainApp(MDApp):
             hint_text="Search",
             size_hint_x=1,
             size_hint_y = None,
-            height = 40,
+            height = dp(40),
             line_color_normal=(0, 0, 0, 1),
             text_color_normal=(0, 0, 0, 1),
 
@@ -176,27 +167,28 @@ class MainApp(MDApp):
         scan_button_layout = AnchorLayout(
             anchor_x = "right",
             anchor_y = "bottom",
-            padding = 10,
+            padding = dp(10),
         )
         barcode_scan_button.bind(on_press=self.scan_barcode)
         scan_button_layout.add_widget(barcode_scan_button)
 
         #pridavani tlacitka pro zadavani filtru na obrazovku
         sort_button = MDIconButton(
-            icon= "sort",
+            icon= "scan-helper",
             md_bg_color = (0.2, 0.6, 0.8, 1)
         )
         sort_button_layout = AnchorLayout(
             anchor_x = "left",
             anchor_y = "bottom",
-            padding = 10,)
+            padding = dp(10),)
+        sort_button.bind(on_press=self.search_barcode_in_dtb)
         sort_button_layout.add_widget(sort_button)
 
         #vertikalni layout pro expansion panely (MDList())
         layout = MDBoxLayout(
             orientation="vertical",
-            spacing=20,
-            padding=20,
+            spacing=dp(20),
+            padding=dp(20),
             size_hint_y=None,
             pos_hint={"center_y": -0.05},
         )
@@ -243,12 +235,7 @@ class MainApp(MDApp):
         for child in self.panel_list.children[:]:  # Iterate over a copy to avoid errors
             self.panel_list.remove_widget(child)
 
-        #conn.reconnect()
-        #sql = """SELECT * FROM client_food_table"""
-        #cursor = conn.cursor()
-        #cursor.execute(sql)
         result = execute_mysql_querry("SELECT * FROM client_food_table")
-        #conn.close()
 
         row_id = []
         for i in range(len(result)):
@@ -285,12 +272,28 @@ class MainApp(MDApp):
         self.barcode_scanner = fBS.BarcodeScannerApp(self.get_scanned_barcode)
         self.barcode_scanner.open_barcode_scanner()
 
+    def search_barcode_in_dtb(self, instance):
+        self.barcode_scanner = fBS.BarcodeScannerApp(self.get_brcd_for_dtb_search)
+        self.barcode_scanner.open_barcode_scanner()
+
+
     #ziskani hodnoty caroveho kodu produktu z popoutu
+    def get_brcd_for_dtb_search(self, barcode):
+        print("getting barcode")
+        self.brcd_for_dtb_search = barcode
+        print(f"barcode found: {barcode}")
+        self.barcode_scanner.close_self()
+        self.search_action(12,self.brcd_for_dtb_search) #cislo dvanact je nahodna adresa aby nepadal kod, normalne by to byla adresa instance tlacitka, ktera zavola tuto funkci
     def get_scanned_barcode(self, barcode):
         self.product_array.clear()
         self.product_array.append(barcode)
-        self.barcode_scanner.close_self()
-        self.date_picker_popup()
+
+        if get_json_response(barcode) == "Unknown":
+            self.prd_not_found.open()
+        else:
+            self.barcode_scanner.close_self()
+            self.date_picker_popup()
+
 
     def date_picker_popup(self):
         self.date_Picker_Overlay = MyDatePicker(self.get_exp_dates)
@@ -298,19 +301,21 @@ class MainApp(MDApp):
 
     def get_exp_dates(self, exp_dates):
         self.product_array.append(exp_dates)
-        upload_product_to_database(self.product_array, self.refresh_app)
 
-    def search_action(self, instance):
+        upload_product_to_database(self.product_array, self.refresh_app, self.prd_not_found.open)
+
+    def search_action(self,instance,barcode=0):
         conn.reconnect()
-        #sql = """SELECT * FROM client_food_table WHERE keywords LIKE %s OR category_tags LIKE %s"""
-        val = f'%{self.search_field.text}%'
-        #cursor.execute(sql, (val,val))
-        #time.sleep(0.1)
-        #result = cursor.fetchall()
-        #conn.close()
+        print(f"refreshing for barcode: {barcode}")
+        if int(barcode)>0:
+            print("yes gooddd")
+            result = search_mysql_dtb("SELECT * FROM client_food_table WHERE barcode LIKE %s", (str(barcode),))
+        else:
+            val = f'%{self.search_field.text}%'
+            result = search_mysql_dtb("SELECT * FROM client_food_table WHERE keywords LIKE %s OR category_tags LIKE %s",
+                                      (val, val))
 
-        result = search_mysql_dtb("SELECT * FROM client_food_table WHERE keywords LIKE %s OR category_tags LIKE %s", (val, val))
-
+        print(result)
         row_id = []
         for i in range(len(result)):
             row_id.append(result[i][0])

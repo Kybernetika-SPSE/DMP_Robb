@@ -26,13 +26,13 @@ MDBoxLayout:
 '''
 
 class BarcodeScannerApp(Popup):
-    def __init__(self, callback, **kwargs):
+    def __init__(self, callback, search_barcode = False, **kwargs):
         super().__init__(**kwargs)
         self.title = "Barcode Scanner"
         self.size_hint = (1, 1)  #fulscreen popout
         self.auto_dismiss = True
         self.background_color = (1, 1, 1, 0)
-
+        self.search_barcode = search_barcode
         #kv string
         self.content = Builder.load_string(KV)
 
@@ -56,7 +56,7 @@ class BarcodeScannerApp(Popup):
     def update(self, dt):
         ret, frame = self.capture.read()
         if ret:
-            #detekce carovych kodu
+            #detekce car kodu
             decoded_objects = decode(frame)
             for obj in decoded_objects:
                 barcode_data = obj.data.decode()
@@ -79,7 +79,6 @@ class BarcodeScannerApp(Popup):
                 self.close_self()
 
     def close_self(self):
-
         self.capture.release()
         self.dismiss()
 

@@ -9,6 +9,13 @@ with open("dtb_config.json","r") as config_file:
 conn = database.connect(**config)
 cursor = conn.cursor()
 
+def get_json_response(barcode):
+    url = f"https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
+    response = requests.get(url)
+    response_json = response.json()
+    product_data = response_json.get("product", "Unknown")
+    return product_data
+
 #metoda pro vykonani mysql prikazu
 def execute_mysql_querry(mysql_query):
     conn.reconnect()
@@ -28,7 +35,7 @@ def search_mysql_dtb(mysql_query, values):
     result = cursor.fetchall()
     return result
 
-def upload_product_to_database(product_array, refresh_function):
+def upload_product_to_database(product_array, refresh_function, product_not_found_method):
     #upload
     sql_brcd = str(product_array[0])
     #sql = """SELECT expiration_date FROM client_food_table WHERE barcode = %s """
@@ -97,40 +104,44 @@ def upload_product_to_database(product_array, refresh_function):
         api_json_file = response.json()
         product_api_data = api_json_file.get('product', 'Unknown')
 
-        #pro hledani v databazi
-        keywords = product_api_data.get('_keywords', 'Unknown')
+        if product_api_data == 'Unknown':
+            product_not_found_method()
 
-        #info o produktech
-        product_name = product_api_data.get('product_name', 'Unknown')
-        product_brand = product_api_data.get('brands', 'Unknown')
-        quantity = product_api_data.get('quantity', 'Unknown')
-        small_image_url = product_api_data.get('image_front_thumb_url', 'Unknown')
+        else:
+            #pro hledani v databazi
+            keywords = product_api_data.get('_keywords', 'Unknown')
 
-        #filtrovani/kategorie
-        category_tags = product_api_data.get('categories_tags', 'Unknown')
+            #info o produktech
+            product_name = product_api_data.get('product_name', 'Unknown')
+            product_brand = product_api_data.get('brands', 'Unknown')
+            quantity = product_api_data.get('quantity', 'Unknown')
+            small_image_url = product_api_data.get('image_front_thumb_url', 'Unknown')
 
-        category_tags_str = ', '.join([tag.split(":")[1] for tag in category_tags])
-        keywords_str = ', '.join(keywords)
+            #filtrovani/kategorie
+            category_tags = product_api_data.get('categories_tags', 'Unknown')
 
-        expiration_date = ''
-        for date in sorted(product_array[1]):
-            #prevedeni jednotlivych dat do stringu
-            formatted_expiration_date = date.strftime('%Y-%m-%d')
-            #pridani do str
-            expiration_date += formatted_expiration_date + ', '
+            category_tags_str = ', '.join([tag.split(":")[1] for tag in category_tags])
+            keywords_str = ', '.join(keywords)
 
-        #vlozeni noveho zaznamu do databaze
-        update_mysql_dtb("INSERT INTO client_food_table (name, brand, quantity, small_image_url, category_tags, keywords, expiration_date, barcode) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",(product_name, product_brand, quantity, small_image_url, category_tags_str, keywords_str, expiration_date, sql_brcd))
+            expiration_date = ''
+            for date in sorted(product_array[1]):
+                #prevedeni jednotlivych dat do stringu
+                formatted_expiration_date = date.strftime('%Y-%m-%d')
+                #pridani do str
+                expiration_date += formatted_expiration_date + ', '
 
-        #sql = """INSERT INTO client_food_table (name, brand, quantity, small_image_url, category_tags, keywords, expiration_date, barcode) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
-        #val = (product_name, product_brand, quantity, small_image_url, category_tags_str, keywords_str, expiration_date, sql_brcd)
-        #cursor.execute(sql, val)
-        #conn.commit()
+            #vlozeni noveho zaznamu do databaze
+            update_mysql_dtb("INSERT INTO client_food_table (name, brand, quantity, small_image_url, category_tags, keywords, expiration_date, barcode) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",(product_name, product_brand, quantity, small_image_url, category_tags_str, keywords_str, expiration_date, sql_brcd))
 
-        #uzavreni pripojeni databaze kvuli spravne aktualizaci databaze
-        conn.close()
-        #obnoveni aplikace
-        Clock.schedule_once(refresh_function,0.1)
+            #sql = """INSERT INTO client_food_table (name, brand, quantity, small_image_url, category_tags, keywords, expiration_date, barcode) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+            #val = (product_name, product_brand, quantity, small_image_url, category_tags_str, keywords_str, expiration_date, sql_brcd)
+            #cursor.execute(sql, val)
+            #conn.commit()
+
+            #uzavreni pripojeni databaze kvuli spravne aktualizaci databaze
+            conn.close()
+            #obnoveni aplikace
+            Clock.schedule_once(refresh_function,0.1)
 
 #spusteni funkce
 #upload_product_to_database(product_array)
